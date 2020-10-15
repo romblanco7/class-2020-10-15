@@ -44,6 +44,17 @@ tibble(urn_red = seq(100, 700, by = 100)) %>%
 
 **Prompt:** As in the book, we will be calculating our posterior distribution of the number of red beads in the urn. Assume that we know that there are 1,000 beads in the urn, all either red, blue or yellow. Create an unnormalized joint distribution of the set of models we are considering and the possible results of our experiment. In this example, we are using a paddle of size 25. (You may want to review the meaning of an unnormalized joint distribution from Chapter 5.) Plot that distribution. It should look very similar to the first plot in Section 6.6.1.
 
+```{r}
+x <- tibble(urn_red = 0:1000) %>% 
+  mutate(paddle_red = map(urn_red, ~ rbinom(n = 10000, size = 25, prob = ./1000))) %>% 
+  unnest(paddle_red)
+
+x %>%
+  ggplot(aes(x = paddle_red, y = urn_red)) +
+  geom_point()
+```
+
+
 Interpret the meaning of the graphic.
 
 
@@ -51,8 +62,20 @@ Interpret the meaning of the graphic.
 
 ## Scene 2
 
-**Prompt:** Using the joint distribution we calculated in Scene 5 as input, calculate your posterior probability density for the number of red beads in the urn, given that that 10 red were sampled in our paddle of 25.
+**Prompt:** Using the joint distribution we calculated in Scene 1 as input, calculate your posterior probability density for the number of red beads in the urn, given that that 10 red were sampled in our paddle of 25.
 
+```{r}
+post <- x %>%
+  filter(paddle_red == 10) %>%
+  group_by(urn_red) %>%
+  summarize(total = n()) %>%
+  mutate(prob = total/sum(total))
+
+post %>%
+  ggplot(aes(x = urn_red, 
+             y = prob)) +
+  geom_col() 
+```
 
 
 
@@ -61,4 +84,13 @@ Interpret the meaning of the graphic.
 **Prompt:** With our posterior probability distribution, we can now forecast outcomes which we have not yet seen. For example, what is the probability of getting more than 3 reds if we sample 20 from the urn, given our posterior? (That is, we are pretending that we don't know the number of red beads in the urn.)
 
 
+```{r}
+post %>%
+  mutate(new_reds = map(urn_red, ~rbinom(n = 100, size = 20, prob = ./1000))) %>%
+  unnest(new_reds) %>%
+  mutate(gt3 = new_reds > 3) %>%
+  mutate(gt3_weighted = prob *gt3) %>%
+  summarize(final = sum(gt3_weighted/sum(prob)))
+
+```
 
